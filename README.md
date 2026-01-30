@@ -1,93 +1,73 @@
-# Todo MCP App
+# MCP App Demo
 
-A simple interactive todo list built with MCP Apps - demonstrates how to create interactive UIs that render inside AI chat windows.
+A simple interactive MCP App that demonstrates rendering UI inside Claude conversations.
 
-## What This Is
+Based on the [official MCP Apps example](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-server-vanillajs).
 
-This is a **proof of concept** for MCP Apps, Anthropic's new extension that allows interactive UI components to render directly in Claude conversations.
+## What This Does
 
-## Project Structure
+When you ask Claude to "get the time", this app:
+1. Returns the current server time
+2. Renders an **interactive UI** directly in the chat window
+3. Lets you click buttons to refresh the time, send messages, etc.
 
-```
-mcp-app/
-├── server.ts          # Local dev server (express + full MCP Apps SDK)
-├── api/mcp.ts         # Vercel serverless function (basic MCP tools)
-├── mcp-app.html       # UI entry point
-├── src/mcp-app.ts     # UI logic (connects to MCP host)
-├── vercel.json        # Vercel config
-└── package.json
-```
-
-## Two Deployment Options
-
-### Option 1: Local Development (Full MCP Apps UI)
-
-This uses the full MCP Apps SDK with interactive UI support.
+## Running Locally
 
 ```bash
 # Install dependencies
 npm install
 
-# Build the UI and start the server
-npm run dev
+# Build UI and start server
+npm start
 
 # Server runs at http://localhost:3001/mcp
 ```
 
-To test with Claude.ai, expose your local server:
-```bash
-# In a separate terminal
-npx cloudflared tunnel --url http://localhost:3001
+## Testing with Claude
+
+1. Expose your local server:
+   ```bash
+   npx cloudflared tunnel --url http://localhost:3001
+   ```
+
+2. Copy the generated URL (e.g., `https://xxx.trycloudflare.com`)
+
+3. Go to **claude.ai** → Profile → **Settings** → **Connectors**
+
+4. Click **Add custom connector**, enter:
+   - Name: `Time App`
+   - URL: `https://xxx.trycloudflare.com/mcp`
+
+5. Start a new chat and ask: "What time is it?" or "Get the current time"
+
+## For Replit/Glitch Deployment
+
+These platforms can run the full Node.js server:
+
+1. Import from GitHub
+2. Run `npm start`
+3. Use the generated public URL as your MCP connector
+
+## Project Structure
+
 ```
-
-Copy the generated URL (e.g., `https://random-name.trycloudflare.com`) and add it as a custom connector in Claude.
-
-### Option 2: Vercel Deployment (Basic MCP Tools)
-
-This deploys to Vercel using `mcp-handler`. Note: This version provides basic MCP tools but the interactive UI rendering may have limited support on remote servers.
-
-```bash
-# Deploy to Vercel
-vercel
-
-# Or link and deploy
-vercel --prod
+├── server.ts       # MCP server with tool + resource registration
+├── main.ts         # Server entry point (HTTP transport)
+├── mcp-app.html    # UI entry point
+├── src/
+│   ├── mcp-app.ts  # UI logic (MCP Apps SDK)
+│   ├── global.css  # Base styles
+│   └── mcp-app.css # App styles
+├── vite.config.ts  # Bundles UI into single HTML
+└── package.json
 ```
-
-Your MCP endpoint will be: `https://your-app.vercel.app/api/mcp`
-
-## Testing on Claude.ai
-
-1. Go to [claude.ai](https://claude.ai)
-2. Click your profile → **Settings** → **Connectors**
-3. Click **Add custom connector**
-4. Enter:
-   - Name: `Todo App`
-   - URL: Your server URL + `/mcp` (e.g., `https://xxx.trycloudflare.com/mcp`)
-5. Start a new chat and ask: "Show me my todo list"
-
-## Available Tools
-
-| Tool | Description |
-|------|-------------|
-| `show-todos` | Shows the interactive todo list UI |
-| `add-todo` | Adds a new todo item |
-| `toggle-todo` | Toggles completion status |
-| `remove-todo` | Removes a todo item |
 
 ## Requirements
 
-- Node.js 18+
-- Claude Pro/Max/Team/Enterprise plan (for custom connectors)
-
-## Important Notes
-
-1. **MCP Apps UI** (the interactive iframe) is a new feature (Jan 2026). Support varies by client.
-2. **Vercel cold starts** will reset the in-memory todo list.
-3. For persistent storage, you'd need to add a database (Redis, Postgres, etc.)
+- Node.js 18+ or Bun
+- Claude Pro/Max/Team/Enterprise (for custom connectors)
 
 ## Resources
 
 - [MCP Apps Documentation](https://modelcontextprotocol.io/docs/extensions/apps)
 - [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps)
-- [Vercel MCP Deployment](https://vercel.com/docs/mcp/deploy-mcp-servers-to-vercel)

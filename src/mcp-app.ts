@@ -1,153 +1,124 @@
-// src/mcp-app.ts - Todo App UI Logic
-import { App } from "@modelcontextprotocol/ext-apps";
+/**
+ * App that demonstrates MCP Apps SDK features with vanilla JS.
+ */
+import {
+  App,
+  applyDocumentTheme,
+  applyHostFonts,
+  applyHostStyleVariables,
+  type McpUiHostContext,
+} from "@modelcontextprotocol/ext-apps";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import "./global.css";
+import "./mcp-app.css";
 
-interface Todo {
-  id: string;
-  text: string;
-  completed: boolean;
+
+function extractTime(result: CallToolResult): string {
+  const { time } = (result.structuredContent as { time?: string }) ?? {};
+  return time ?? "[ERROR]";
 }
 
-const todoListEl = document.getElementById("todo-list")!;
-const newTodoInput = document.getElementById("new-todo") as HTMLInputElement;
-const addBtn = document.getElementById("add-btn")!;
 
-// Initialize the MCP App
-const app = new App({ name: "Todo App", version: "1.0.0" });
+const mainEl = document.querySelector(".main") as HTMLElement;
+const serverTimeEl = document.getElementById("server-time")!;
+const getTimeBtn = document.getElementById("get-time-btn")!;
+const messageText = document.getElementById("message-text") as HTMLTextAreaElement;
+const sendMessageBtn = document.getElementById("send-message-btn")!;
+const logText = document.getElementById("log-text") as HTMLInputElement;
+const sendLogBtn = document.getElementById("send-log-btn")!;
+const linkUrl = document.getElementById("link-url") as HTMLInputElement;
+const openLinkBtn = document.getElementById("open-link-btn")!;
 
-// Current todos state
-let todos: Todo[] = [];
 
-// Render the todo list
-function renderTodos() {
-  if (todos.length === 0) {
-    todoListEl.innerHTML = '<li class="empty-state">No tasks yet. Add one above!</li>';
-    return;
+function handleHostContextChanged(ctx: McpUiHostContext) {
+  if (ctx.theme) {
+    applyDocumentTheme(ctx.theme);
   }
-
-  todoListEl.innerHTML = todos
-    .map(
-      (todo) => `
-      <li class="todo-item ${todo.completed ? "completed" : ""}" data-id="${todo.id}">
-        <input type="checkbox" class="todo-checkbox" ${todo.completed ? "checked" : ""} />
-        <span class="todo-text">${escapeHtml(todo.text)}</span>
-        <button class="delete-btn">Delete</button>
-      </li>
-    `
-    )
-    .join("");
-
-  // Add event listeners
-  todoListEl.querySelectorAll(".todo-checkbox").forEach((checkbox) => {
-    checkbox.addEventListener("change", handleToggle);
-  });
-
-  todoListEl.querySelectorAll(".delete-btn").forEach((btn) => {
-    btn.addEventListener("click", handleDelete);
-  });
-}
-
-// Escape HTML to prevent XSS
-function escapeHtml(text: string): string {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// Parse todos from tool result
-function parseTodos(result: any): Todo[] {
-  try {
-    const text = result.content?.find((c: any) => c.type === "text")?.text;
-    if (text) {
-      return JSON.parse(text);
-    }
-  } catch (e) {
-    console.error("Failed to parse todos:", e);
+  if (ctx.styles?.variables) {
+    applyHostStyleVariables(ctx.styles.variables);
   }
-  return [];
+  if (ctx.styles?.css?.fonts) {
+    applyHostFonts(ctx.styles.css.fonts);
+  }
+  if (ctx.safeAreaInsets) {
+    mainEl.style.paddingTop = `${ctx.safeAreaInsets.top}px`;
+    mainEl.style.paddingRight = `${ctx.safeAreaInsets.right}px`;
+    mainEl.style.paddingBottom = `${ctx.safeAreaInsets.bottom}px`;
+    mainEl.style.paddingLeft = `${ctx.safeAreaInsets.left}px`;
+  }
 }
 
-// Handle initial tool result from host
-app.ontoolresult = (result) => {
-  todos = parseTodos(result);
-  renderTodos();
+
+// 1. Create app instance
+const app = new App({ name: "Get Time App", version: "1.0.0" });
+
+
+// 2. Register handlers BEFORE connecting
+app.onteardown = async () => {
+  console.info("App is being torn down");
+  return {};
 };
 
-// Handle adding a new todo
-async function handleAdd() {
-  const text = newTodoInput.value.trim();
-  if (!text) return;
+app.ontoolinput = (params) => {
+  console.info("Received tool call input:", params);
+};
 
-  newTodoInput.value = "";
-  newTodoInput.disabled = true;
-  addBtn.textContent = "Adding...";
+app.ontoolresult = (result) => {
+  console.info("Received tool call result:", result);
+  serverTimeEl.textContent = extractTime(result);
+};
 
+app.ontoolcancelled = (params) => {
+  console.info("Tool call cancelled:", params.reason);
+};
+
+app.onerror = console.error;
+
+app.onhostcontextchanged = handleHostContextChanged;
+
+
+getTimeBtn.addEventListener("click", async () => {
   try {
-    const result = await app.callServerTool({
-      name: "add-todo",
-      arguments: { text },
-    });
-    todos = parseTodos(result);
-    renderTodos();
+    console.info("Calling get-time tool...");
+    const result = await app.callServerTool({ name: "get-time", arguments: {} });
+    console.info("get-time result:", result);
+    serverTimeEl.textContent = extractTime(result);
   } catch (e) {
-    console.error("Failed to add todo:", e);
-  } finally {
-    newTodoInput.disabled = false;
-    addBtn.textContent = "Add";
-    newTodoInput.focus();
-  }
-}
-
-// Handle toggling a todo
-async function handleToggle(e: Event) {
-  const checkbox = e.target as HTMLInputElement;
-  const todoItem = checkbox.closest(".todo-item") as HTMLElement;
-  const id = todoItem.dataset.id!;
-
-  checkbox.disabled = true;
-
-  try {
-    const result = await app.callServerTool({
-      name: "toggle-todo",
-      arguments: { id },
-    });
-    todos = parseTodos(result);
-    renderTodos();
-  } catch (e) {
-    console.error("Failed to toggle todo:", e);
-    checkbox.disabled = false;
-  }
-}
-
-// Handle deleting a todo
-async function handleDelete(e: Event) {
-  const btn = e.target as HTMLButtonElement;
-  const todoItem = btn.closest(".todo-item") as HTMLElement;
-  const id = todoItem.dataset.id!;
-
-  btn.disabled = true;
-  btn.textContent = "...";
-
-  try {
-    const result = await app.callServerTool({
-      name: "remove-todo",
-      arguments: { id },
-    });
-    todos = parseTodos(result);
-    renderTodos();
-  } catch (e) {
-    console.error("Failed to delete todo:", e);
-    btn.disabled = false;
-    btn.textContent = "Delete";
-  }
-}
-
-// Set up event listeners
-addBtn.addEventListener("click", handleAdd);
-newTodoInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
-    handleAdd();
+    console.error(e);
+    serverTimeEl.textContent = "[ERROR]";
   }
 });
 
-// Connect to the host
-app.connect();
+sendMessageBtn.addEventListener("click", async () => {
+  const signal = AbortSignal.timeout(5000);
+  try {
+    console.info("Sending message text to Host:", messageText.value);
+    const { isError } = await app.sendMessage(
+      { role: "user", content: [{ type: "text", text: messageText.value }] },
+      { signal },
+    );
+    console.info("Message", isError ? "rejected" : "accepted");
+  } catch (e) {
+    console.error("Message send error:", signal.aborted ? "timed out" : e);
+  }
+});
+
+sendLogBtn.addEventListener("click", async () => {
+  console.info("Sending log text to Host:", logText.value);
+  await app.sendLog({ level: "info", data: logText.value });
+});
+
+openLinkBtn.addEventListener("click", async () => {
+  console.info("Sending open link request to Host:", linkUrl.value);
+  const { isError } = await app.openLink({ url: linkUrl.value });
+  console.info("Open link request", isError ? "rejected" : "accepted");
+});
+
+
+// 3. Connect to host
+app.connect().then(() => {
+  const ctx = app.getHostContext();
+  if (ctx) {
+    handleHostContextChanged(ctx);
+  }
+});
