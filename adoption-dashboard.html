@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Developer Adoption Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 32px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    header span {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #1e3a5f;
+      color: #60a5fa;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-left: 10px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: #1a1f2e;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+
+    .stat-card .label {
+      font-size: 12px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 8px;
+    }
+
+    .stat-card .value {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .stat-card .delta {
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .delta.up { color: #34d399; }
+    .delta.down { color: #f87171; }
+
+    .charts {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+    }
+
+    .chart-card {
+      background: #1a1f2e;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .chart-card h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 20px;
+    }
+
+    canvas {
+      width: 100% !important;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>CodePilot Adoption<span class="badge">Beta</span></h1>
+    </div>
+    <span>Last updated: Apr 1, 2026</span>
+  </header>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="label">Total Users</div>
+      <div class="value">12,840</div>
+      <div class="delta up">↑ 18% vs last month</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Active This Week</div>
+      <div class="value">4,201</div>
+      <div class="delta up">↑ 9% vs last week</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Avg. Sessions / Dev</div>
+      <div class="value">6.4</div>
+      <div class="delta up">↑ 1.2 vs last month</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Churn Rate</div>
+      <div class="value">3.2%</div>
+      <div class="delta down">↑ 0.4pp vs last month</div>
+    </div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-card">
+      <h2>Monthly Active Users — Last 12 Months</h2>
+      <canvas id="adoptionChart" height="90"></canvas>
+    </div>
+    <div class="chart-card">
+      <h2>Adoption by Team</h2>
+      <canvas id="teamChart" height="220"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const months = ["May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr"];
+    const mau = [890, 1140, 1380, 1720, 2050, 2440, 3100, 4200, 5800, 7900, 10500, 12840];
+
+    const adoptionCtx = document.getElementById("adoptionChart").getContext("2d");
+    new Chart(adoptionCtx, {
+      type: "line",
+      data: {
+        labels: months,
+        datasets: [{
+          label: "MAU",
+          data: mau,
+          fill: true,
+          tension: 0.4,
+          borderColor: "#60a5fa",
+          backgroundColor: "rgba(96,165,250,0.10)",
+          pointBackgroundColor: "#60a5fa",
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "#1e293b",
+            titleColor: "#94a3b8",
+            bodyColor: "#e2e8f0",
+            borderColor: "#334155",
+            borderWidth: 1,
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: "#1e293b" },
+            ticks: { color: "#64748b", font: { size: 12 } },
+          },
+          y: {
+            grid: { color: "#1e293b" },
+            ticks: {
+              color: "#64748b",
+              font: { size: 12 },
+              callback: v => v >= 1000 ? (v/1000).toFixed(0) + "k" : v,
+            },
+          }
+        }
+      }
+    });
+
+    const teamCtx = document.getElementById("teamChart").getContext("2d");
+    new Chart(teamCtx, {
+      type: "bar",
+      data: {
+        labels: ["Platform", "Frontend", "Backend", "Data", "DevOps", "Mobile"],
+        datasets: [{
+          label: "Adoption %",
+          data: [87, 74, 68, 55, 91, 43],
+          backgroundColor: [
+            "#60a5fa", "#818cf8", "#34d399", "#fb923c", "#a78bfa", "#f472b6"
+          ],
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "#1e293b",
+            titleColor: "#94a3b8",
+            bodyColor: "#e2e8f0",
+            borderColor: "#334155",
+            borderWidth: 1,
+            callbacks: { label: ctx => ` ${ctx.raw}% adopted` }
+          }
+        },
+        scales: {
+          x: {
+            min: 0, max: 100,
+            grid: { color: "#1e293b" },
+            ticks: { color: "#64748b", font: { size: 12 }, callback: v => v + "%" },
+          },
+          y: {
+            grid: { display: false },
+            ticks: { color: "#94a3b8", font: { size: 12 } },
+          }
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>
